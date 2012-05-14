@@ -3,6 +3,7 @@
 #include <cv.h>
 #include <highgui.h>
 
+// git modified
 IplImage *Ipl_rgb, *Ipl_depth, *Ipl_rgb_result, *Ipl_depth_result;
 int WIN_SIZE_X;
 int WIN_SIZE_Y;
