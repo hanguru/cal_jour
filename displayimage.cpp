@@ -46,7 +46,7 @@ void DisplayImage::process(IplImage *Ipl_rgb_src, IplImage *Ipl_depth_src, IplIm
         }
 
         cvShowImage ("Color", Ipl_rgb_disp);
-        cvShowImage ("Colo2r", Ipl_rgb_result_disp);
+        cvShowImage ("Color2", Ipl_rgb_result_disp);
         cvShowImage ("Depth", Ipl_depth_disp);
         cvWaitKey(33);
     }
