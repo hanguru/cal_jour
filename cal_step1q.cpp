@@ -148,10 +148,45 @@ void cal_step1q::run()
                         focal_test_num = focal_test_num;
                 }
 #else
-                left_depth = p_Ipl_img_src[left_x+left_y*Ipl_depth_disp->width];
-                right_depth = p_Ipl_img_src[right_x+right_y*Ipl_depth_disp->width];
 
-                float ave_rate = 0.1;
+// change !!! use average depth in 3x3 for noise resistance
+                //left_depth = p_Ipl_img_src[left_x+left_y*Ipl_depth_disp->width];
+                //right_depth = p_Ipl_img_src[right_x+right_y*Ipl_depth_disp->width];
+
+                if ( (left_x>2) & (left_x<638) & (right_x>2) & (right_x<638) )
+                {
+
+                    left_depth = 0;
+                    right_depth = 0;
+
+                    int left_cnt = 0, right_cnt = 0, temp_depth = 0;
+                    for (int i=-2; i<3; i++)
+                    {
+                        for (int j=-2; j<3; j++)
+                        {
+                            if (p_Ipl_img_dst[3*(left_x+j+(left_y+i)*Ipl_depth_disp->width)] != 0)
+                            {
+                                left_depth += p_Ipl_img_src[left_x+j+(left_y+i)*Ipl_depth_disp->width];
+                                left_cnt ++;
+                            }
+                            if (p_Ipl_img_dst[3*(right_x+j+(right_y+i)*Ipl_depth_disp->width)] != 0)
+                            {
+                                right_depth += p_Ipl_img_src[right_x+j+(right_y+i)*Ipl_depth_disp->width];
+                                right_cnt ++;
+                            }
+                        }
+                    }
+                    left_depth = left_depth / left_cnt;
+                    right_depth = right_depth / right_cnt;
+                }
+                else
+                {
+                    left_depth = p_Ipl_img_src[left_x+left_y*Ipl_depth_disp->width];
+                    right_depth = p_Ipl_img_src[right_x+right_y*Ipl_depth_disp->width];
+                }
+
+// change !!! less buffering
+                float ave_rate = 0.25;
                 left_x_ave = left_x_ave * (1-ave_rate) + left_x * ave_rate;
                 left_y_ave = left_y_ave * (1-ave_rate) + left_y * ave_rate;
                 left_depth_ave = left_depth_ave * (1-ave_rate) + left_depth * ave_rate;
@@ -161,10 +196,11 @@ void cal_step1q::run()
 
                 left_x = (int)left_x_ave;
                 left_y = (int)left_y_ave;
-                left_depth = (int)left_depth_ave;
+                //left_depth = (int)left_depth_ave;
                 right_x = (int)right_x_ave;
                 right_y = (int)right_y_ave;
                 right_depth = (int)right_depth_ave;
+
 #endif
 
                 sprintf( s_text, "%d",left_depth);
@@ -175,7 +211,8 @@ void cal_step1q::run()
                 //if( (left_y == right_y)&(left_y != 0) & (h_cal_num<CAL_NUM))
                 if( (abs(left_y - right_y) < 2) & (left_y != 0) & (h_cal_num<CAL_NUM))
                 {
-                        if ( (h_cal_num == 0) | ((abs(left_pt[h_cal_num-1].x - left_x) > 10) & (abs(right_pt[h_cal_num-1].x - right_x) > 10)) )
+                        //if ( (h_cal_num == 0) | ((abs(left_pt[h_cal_num-1].x - left_x) > 10) & (abs(right_pt[h_cal_num-1].x - right_x) > 10)) )
+                        if (1)
                         {
 
                                 cvLine(Ipl_calibration_test, cvPoint(left_x, left_y), cvPoint(right_x, right_y), CV_RGB(255,0,0), 2, 4, 0);
@@ -192,7 +229,7 @@ void cal_step1q::run()
                                                 //cal_focal = fopen ("calibration_fxfy.dat", "a+");
                                                 //fprintf (cal_focal, "%d\t%d\t%d\t%d\n", left_x-320, left_depth, right_x-320, right_depth);
                                                 //fclose(cal_focal);
-
+#if 0
                                                 for (int i =0; i< h_cal_num; i++)
                                                 {
                                                         unsigned int a = abs((left_pt[i].x-320) * left_pt[i].y - (right_pt[i].x-320) * right_pt[i].y);
@@ -222,6 +259,23 @@ void cal_step1q::run()
                                                                 focal_x_num++;
                                                         }
                                                 }
+#else
+                                                // samples and length save (assume f is one)
+                                                int X1 =  (left_x-240) * left_depth;
+                                                int X2 =  (right_x-240) * right_depth;
+                                                int L1 = (X1-X2) * (X1-X2);
+                                                int L2 = (left_depth - right_depth) * (left_depth - right_depth);
+                                                int L = L1+L2;
+
+                                                FILE *cal_focal;
+                                                cal_focal = fopen ("cal_horizontal_samples.dat", "a+");
+                                                //fprintf (cal_focal, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%f\n", left_x-320, left_depth, right_x-320, right_depth, left_pt[i].x-320, left_pt[i].y, right_pt[i].x-320, right_pt[i].y, fx_square, sqrt(fx_square));
+                                                fprintf (cal_focal, "%d\t%d\t%d\t%d\t%d\t%d\t%d\n", left_x-320, left_depth, right_x-320, right_depth, L1, L2, L);
+
+                                                //fprintf (cal_focal, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%f\n", top_y-240, top_depth, bottom_y-240, bottom_depth, top_pt[i].x-240, top_pt[i].y, bottom_pt[i].x-240, bottom_pt[i].y, fx_square, sqrt(fx_square));
+                                                fclose(cal_focal);
+#endif
+
                                         }
 
                                         left_pt[h_cal_num].x = left_x;
@@ -266,10 +320,42 @@ void cal_step1q::run()
 
 
 #else
-                top_depth = p_Ipl_img_src[top_x+top_y*Ipl_depth_disp->width];
-                bottom_depth = p_Ipl_img_src[bottom_x+bottom_y*Ipl_depth_disp->width];
+                //top_depth = p_Ipl_img_src[top_x+top_y*Ipl_depth_disp->width];
+                //bottom_depth = p_Ipl_img_src[bottom_x+bottom_y*Ipl_depth_disp->width];
 
-                float ave_rate = 0.1;
+                if ( (top_x>2) & (top_x<478) & (bottom_x>2) & (bottom_x<478) )
+                {
+
+                    top_depth = 0;
+                    bottom_depth = 0;
+
+                    int top_cnt = 0, bot_cnt = 0, temp_depth = 0;
+                    for (int i=-2; i<3; i++)
+                    {
+                        for (int j=-2; j<3; j++)
+                        {
+                            if (p_Ipl_img_dst[3*(top_x+j+(top_y+i)*Ipl_depth_disp->width)] != 0)
+                            {
+                                top_depth += p_Ipl_img_src[top_x+j+(top_y+i)*Ipl_depth_disp->width];
+                                top_cnt ++;
+                            }
+                            if (p_Ipl_img_dst[3*(bottom_x+j+(bottom_y+i)*Ipl_depth_disp->width)] != 0)
+                            {
+                                bottom_depth += p_Ipl_img_src[bottom_x+j+(bottom_y+i)*Ipl_depth_disp->width];
+                                bot_cnt ++;
+                            }
+                        }
+                    }
+                    top_depth = top_depth / top_cnt;
+                    bottom_depth = bottom_depth / bot_cnt;
+                }
+                else
+                {
+                    top_depth = p_Ipl_img_src[top_x+top_y*Ipl_depth_disp->width];
+                    bottom_depth = p_Ipl_img_src[bottom_x+bottom_y*Ipl_depth_disp->width];
+                }
+
+                float ave_rate = 0.25;
                 top_x_ave = top_x_ave * (1-ave_rate) + top_x * ave_rate;
                 top_y_ave = top_y_ave * (1-ave_rate) + top_y * ave_rate;
                 top_depth_ave = top_depth_ave * (1-ave_rate) + top_depth * ave_rate;
@@ -279,7 +365,7 @@ void cal_step1q::run()
 
                 top_x = (int)top_x_ave;
                 top_y = (int)top_y_ave;
-                top_depth = (int)top_depth_ave;
+                //top_depth = (int)top_depth_ave;
                 bottom_x = (int)bottom_x_ave;
                 bottom_y = (int)bottom_y_ave;
                 bottom_depth = (int)bottom_depth_ave;
@@ -292,7 +378,8 @@ void cal_step1q::run()
 
                 if( (abs(top_x - bottom_x)<2)&(top_x != 0) & (v_cal_num<CAL_NUM))
                 {
-                        if ( (v_cal_num == 0) | ((abs(top_pt[v_cal_num-1].x - top_y) > 10) & (abs(bottom_pt[v_cal_num-1].x - bottom_y) > 10)) )
+                        //if ( (v_cal_num == 0) | ((abs(top_pt[v_cal_num-1].x - top_y) > 10) & (abs(bottom_pt[v_cal_num-1].x - bottom_y) > 10)) )
+                        if (1)
                         {
 
                                 cvLine(Ipl_calibration_test, cvPoint(top_x, top_y), cvPoint(bottom_x, bottom_y), CV_RGB(255,0,0), 2, 4, 0);
@@ -309,8 +396,7 @@ void cal_step1q::run()
                                                 //cal_focal = fopen ("calibration_fxfy.dat", "a+");
                                                 //fprintf (cal_focal, "%d\t%d\t%d\t%d\n", top_y-240, top_depth, bottom_y-240, bottom_depth);
                                                 //fclose(cal_focal);
-
-
+#if 0
                                                 for (int i =0; i< v_cal_num; i++)
                                                 {
                                                         unsigned int a = abs((top_pt[i].x-240) * top_pt[i].y - (bottom_pt[i].x-240) * bottom_pt[i].y);
@@ -340,6 +426,23 @@ void cal_step1q::run()
                                                                 focal_y_num++;
                                                         }
                                                 }
+#else
+                                                // samples and length save (assume f is one)
+                                                int X1 =  (top_y-240) * top_depth;
+                                                int X2 =  (bottom_y-240) * bottom_depth;
+                                                int L1 = (X1-X2) * (X1-X2);
+                                                int L2 = (top_depth - bottom_depth) * (top_depth - bottom_depth);
+                                                int L = L1+L2;
+
+                                                FILE *cal_focal;
+                                                cal_focal = fopen ("cal_vertical_samples.dat", "a+");
+                                                //fprintf (cal_focal, "%d\t%d\t%d\t%d\t%f\t%u\t%u\n", top_y-240, top_depth, bottom_y-240, bottom_depth, L, L1, L2 );
+                                                fprintf (cal_focal, "%d\t%d\t%d\t%d\t%d\t%d\t%d\n", top_y-240, top_depth, bottom_y-240, bottom_depth, L1, L2, L );
+
+                                                //fprintf (cal_focal, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%f\n", top_y-240, top_depth, bottom_y-240, bottom_depth, top_pt[i].x-240, top_pt[i].y, bottom_pt[i].x-240, bottom_pt[i].y, fx_square, sqrt(fx_square));
+                                                fclose(cal_focal);
+#endif
+
                                         }
 
                                         top_pt[v_cal_num].x = top_y;
@@ -366,7 +469,7 @@ void cal_step1q::run()
                 if( (top_x == bottom_x)&(top_x != 0)& (v_cal_num<CAL_NUM))
                 {
                         cvLine(Ipl_calibration_test, cvPoint(top_x, top_y), cvPoint(bottom_x, bottom_y), CV_RGB(255,0,0), 2, 4, 0);
-
+i
                         if (top_depth==bottom_depth)
                         {
                                 v_cal_data[v_cal_num].depth = top_depth;

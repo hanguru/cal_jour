@@ -1,7 +1,7 @@
 #ifndef CAMERARUNQ_H
 #define CAMERARUNQ_H
-//#define SAMPLE_XML_PATH "/root/work/kinect/OpenNI/Samples/Config/SamplesConfig.xml"
-#define SAMPLE_XML_PATH "C:/Program Files/OpenNI/Data/SamplesConfig.xml"
+#define SAMPLE_XML_PATH "/root/work/kinect/OpenNI/Samples/Config/SamplesConfig.xml"
+//#define SAMPLE_XML_PATH "C:/Program Files/OpenNI/Data/SamplesConfig.xml"
 
 #include <QThread>
 #include <XnCppWrapper.h>

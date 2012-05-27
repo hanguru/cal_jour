@@ -57,6 +57,6 @@ void MainWindow::on_actionDisplay_triggered()
 
 void MainWindow::on_actionStep1_triggered()
 {
-    cal_step1q *myCalStep1q = new cal_step1q(1); // 0: horizontal, 1: vertical
+    cal_step1q *myCalStep1q = new cal_step1q(0); // 0: horizontal, 1: vertical
     myCalStep1q->start();
 }

@@ -82,7 +82,7 @@ void CameraRunQ::run()
     rc = g_context.FindExistingNode(XN_NODE_TYPE_IMAGE, g_image);
 
     // aligning rgb & depth
-    g_depth.GetAlternativeViewPointCap().SetViewPoint(g_image);
+    //g_depth.GetAlternativeViewPointCap().SetViewPoint(g_image);
 
     xn::ImageMetaData g_imageMD;
     xn::DepthMetaData g_depthMD;
