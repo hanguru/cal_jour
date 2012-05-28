@@ -47,6 +47,11 @@ private:
     float top_x_ave, top_y_ave, bottom_x_ave, bottom_y_ave, top_depth_ave, bottom_depth_ave;
     int focal_test_num;
 
+    // for cvFitLine function
+    int SAMPLE_CNT, Hpoints_cnt, Vpoints_cnt;
+    CvPoint2D32f *Hpoints, *Vpoints;
+    float HFitResult[4], VFitResult[4];// to store the results
+
     IplImage *Ipl_depth_disp, *Ipl_calibration_test;
     int direction;
 

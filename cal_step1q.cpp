@@ -14,6 +14,11 @@ cal_step1q::cal_step1q(int direction_of_object)
 
         //rgb_result_copying = 0;
 
+        // for cvFitLine function
+        SAMPLE_CNT = 100; Hpoints_cnt = 0; Vpoints_cnt = 0;
+        Hpoints=(CvPoint2D32f*)malloc( SAMPLE_CNT * sizeof(Hpoints[0]));
+        Vpoints=(CvPoint2D32f*)malloc( SAMPLE_CNT * sizeof(Vpoints[0]));
+
 }
 
 cal_step1q::~cal_step1q()
@@ -149,7 +154,7 @@ void cal_step1q::run()
                 }
 #else
 
-// change !!! use average depth in 3x3 for noise resistance
+                // change !!! use average depth in 3x3 for noise resistance
                 //left_depth = p_Ipl_img_src[left_x+left_y*Ipl_depth_disp->width];
                 //right_depth = p_Ipl_img_src[right_x+right_y*Ipl_depth_disp->width];
 
@@ -220,8 +225,10 @@ void cal_step1q::run()
                                 //if (left_depth==right_depth)
                                 if(1)
                                 {
+#if 0
                                         if (h_cal_num!=0)
                                         {
+
                                                 unsigned int c = abs((left_x-320) * left_depth - (right_x-320) * right_depth);
                                                 unsigned int d = abs(left_depth - right_depth);
 
@@ -229,7 +236,7 @@ void cal_step1q::run()
                                                 //cal_focal = fopen ("calibration_fxfy.dat", "a+");
                                                 //fprintf (cal_focal, "%d\t%d\t%d\t%d\n", left_x-320, left_depth, right_x-320, right_depth);
                                                 //fclose(cal_focal);
-#if 0
+
                                                 for (int i =0; i< h_cal_num; i++)
                                                 {
                                                         unsigned int a = abs((left_pt[i].x-320) * left_pt[i].y - (right_pt[i].x-320) * right_pt[i].y);
@@ -259,24 +266,35 @@ void cal_step1q::run()
                                                                 focal_x_num++;
                                                         }
                                                 }
-#else
-                                                // samples and length save (assume f is one)
-                                                int X1 =  (left_x-240) * left_depth;
-                                                int X2 =  (right_x-240) * right_depth;
-                                                int L1 = (X1-X2) * (X1-X2);
-                                                int L2 = (left_depth - right_depth) * (left_depth - right_depth);
-                                                int L = L1+L2;
-
-                                                FILE *cal_focal;
-                                                cal_focal = fopen ("cal_horizontal_samples.dat", "a+");
-                                                //fprintf (cal_focal, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%f\n", left_x-320, left_depth, right_x-320, right_depth, left_pt[i].x-320, left_pt[i].y, right_pt[i].x-320, right_pt[i].y, fx_square, sqrt(fx_square));
-                                                fprintf (cal_focal, "%d\t%d\t%d\t%d\t%d\t%d\t%d\n", left_x-320, left_depth, right_x-320, right_depth, L1, L2, L);
-
-                                                //fprintf (cal_focal, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%f\n", top_y-240, top_depth, bottom_y-240, bottom_depth, top_pt[i].x-240, top_pt[i].y, bottom_pt[i].x-240, bottom_pt[i].y, fx_square, sqrt(fx_square));
-                                                fclose(cal_focal);
-#endif
 
                                         }
+
+#else
+
+                                        FILE *cal_focal;
+                                        cal_focal = fopen ("cal_horizontal_samples.dat", "a+");
+                                        //fprintf (cal_focal, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%f\n", left_x-320, left_depth, right_x-320, right_depth, left_pt[i].x-320, left_pt[i].y, right_pt[i].x-320, right_pt[i].y, fx_square, sqrt(fx_square));
+                                        fprintf (cal_focal, "%d\t%d\t%d\t%d\n", left_x-320, left_depth, right_x-320, right_depth);
+
+                                        //fprintf (cal_focal, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%f\n", top_y-240, top_depth, bottom_y-240, bottom_depth, top_pt[i].x-240, top_pt[i].y, bottom_pt[i].x-240, bottom_pt[i].y, fx_square, sqrt(fx_square));
+                                        fclose(cal_focal);
+
+                                        // samples and length save (assume f is one)
+                                        float d1 = (float)(left_depth) / 256;
+                                        float d2 = (float)(right_depth) / 256;
+                                        float X1 =  (float)(left_x-320) * d1;
+                                        float X2 =  (float)(right_x-320) * d2;
+
+                                        Hpoints[Hpoints_cnt].x = (X1-X2) * (X1-X2);
+                                        Hpoints[Hpoints_cnt].y = (d1-d2) * (d1-d2);
+                                        Hpoints_cnt ++;
+
+                                        if (Hpoints_cnt > 3)
+                                        {
+                                            CvMat Hpoint_mat = cvMat( 1, Hpoints_cnt, CV_32FC2, Hpoints );
+                                            cvFitLine(&Hpoint_mat,CV_DIST_HUBER ,0,0.01,0.01,HFitResult);
+                                        }
+#endif
 
                                         left_pt[h_cal_num].x = left_x;
                                         left_pt[h_cal_num].y = left_depth;
@@ -387,6 +405,7 @@ void cal_step1q::run()
                                 //if (top_depth==bottom_depth)
                                 if(1)
                                 {
+#if 0
                                         if (v_cal_num!=0)
                                         {
                                                 unsigned int c = abs((top_y-240) * top_depth - (bottom_y-240) * bottom_depth);
@@ -396,7 +415,7 @@ void cal_step1q::run()
                                                 //cal_focal = fopen ("calibration_fxfy.dat", "a+");
                                                 //fprintf (cal_focal, "%d\t%d\t%d\t%d\n", top_y-240, top_depth, bottom_y-240, bottom_depth);
                                                 //fclose(cal_focal);
-#if 0
+
                                                 for (int i =0; i< v_cal_num; i++)
                                                 {
                                                         unsigned int a = abs((top_pt[i].x-240) * top_pt[i].y - (bottom_pt[i].x-240) * bottom_pt[i].y);
@@ -426,24 +445,35 @@ void cal_step1q::run()
                                                                 focal_y_num++;
                                                         }
                                                 }
-#else
-                                                // samples and length save (assume f is one)
-                                                int X1 =  (top_y-240) * top_depth;
-                                                int X2 =  (bottom_y-240) * bottom_depth;
-                                                int L1 = (X1-X2) * (X1-X2);
-                                                int L2 = (top_depth - bottom_depth) * (top_depth - bottom_depth);
-                                                int L = L1+L2;
-
-                                                FILE *cal_focal;
-                                                cal_focal = fopen ("cal_vertical_samples.dat", "a+");
-                                                //fprintf (cal_focal, "%d\t%d\t%d\t%d\t%f\t%u\t%u\n", top_y-240, top_depth, bottom_y-240, bottom_depth, L, L1, L2 );
-                                                fprintf (cal_focal, "%d\t%d\t%d\t%d\t%d\t%d\t%d\n", top_y-240, top_depth, bottom_y-240, bottom_depth, L1, L2, L );
-
-                                                //fprintf (cal_focal, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%f\n", top_y-240, top_depth, bottom_y-240, bottom_depth, top_pt[i].x-240, top_pt[i].y, bottom_pt[i].x-240, bottom_pt[i].y, fx_square, sqrt(fx_square));
-                                                fclose(cal_focal);
-#endif
 
                                         }
+#else
+
+                                        FILE *cal_focal;
+                                        cal_focal = fopen ("cal_vertical_samples.dat", "a+");
+                                        //fprintf (cal_focal, "%d\t%d\t%d\t%d\t%f\t%u\t%u\n", top_y-240, top_depth, bottom_y-240, bottom_depth, L, L1, L2 );
+                                        fprintf (cal_focal, "%d\t%d\t%d\t%d\n", top_y-240, top_depth, bottom_y-240, bottom_depth);
+
+                                        //fprintf (cal_focal, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%f\n", top_y-240, top_depth, bottom_y-240, bottom_depth, top_pt[i].x-240, top_pt[i].y, bottom_pt[i].x-240, bottom_pt[i].y, fx_square, sqrt(fx_square));
+                                        fclose(cal_focal);
+
+                                        // samples and length save (assume f is one)
+                                        float d1 = (float)(top_depth) / 256;
+                                        float d2 = (float)(bottom_depth) / 256;
+                                        float X1 =  (float)(top_y-240) * d1;
+                                        float X2 =  (float)(bottom_y-240) * d2;
+
+                                        Vpoints[Vpoints_cnt].x = (X1-X2) * (X1-X2);
+                                        Vpoints[Vpoints_cnt].y = (d1-d2) * (d1-d2);
+                                        Vpoints_cnt ++;
+
+                                        if (Vpoints_cnt > 3)
+                                        {
+                                            CvMat Vpoint_mat = cvMat( 1, Vpoints_cnt, CV_32FC2, Vpoints );
+                                            cvFitLine(&Vpoint_mat,CV_DIST_HUBER ,0,0.01,0.01,VFitResult);
+                                        }
+
+#endif
 
                                         top_pt[v_cal_num].x = top_y;
                                         top_pt[v_cal_num].y = top_depth;
@@ -480,7 +510,7 @@ i
 */
         }
 
-
+/*
         //sprintf( s_text, "min_x=%d, min_y=%d", minpoint_x, minpoint_y);
 
         float focal_x_ave=0;
@@ -492,10 +522,14 @@ i
                 }
                 focal_x_ave /= focal_x_num;
         }
+*/
 
-        sprintf( s_text, "focal_x=%f left_x=%d, left_y=%d, right_x=%d, right_y=%d H_length = %d", focal_x_ave, left_x, left_y, right_x, right_y, right_x-left_x);
+        float H_fit_angle = (float)(-HFitResult[0])/HFitResult[1];
+        float focal_x = sqrt(H_fit_angle);
+        sprintf( s_text, "focal_x=%f HFit_Result[1]=%e, HFit_x=%f, HFit_y=%f, ", focal_x, HFitResult[1],HFitResult[2],HFitResult[3]);
+        //sprintf( s_text, "HFitResult[0]=%.2f HFitResult[1]=%.2f, HFitResult[2]=%.2f, HFitResult[3]=%.2f", HFitResult[0],HFitResult[1],HFitResult[2],HFitResult[3]);
         cvPutText (Ipl_calibration_test, s_text,cvPoint(10,30), &font, cvScalar(255,255,0));
-
+/*
         float focal_y_ave=0;
         if ( focal_y_num > 0 & focal_y_num <= CAL_NUM*CAL_NUM)
         {
@@ -505,8 +539,12 @@ i
                 }
                 focal_y_ave /= focal_y_num;
         }
-
-        sprintf( s_text, "focal_y=%f top_x=%d, top_y=%d, bottom_x=%d, bottom_y=%d V_length = %d", focal_y_ave, top_x, top_y, bottom_x, bottom_y, bottom_y-top_y);
+*/
+        float V_fit_angle = (float)(-VFitResult[0])/VFitResult[1];
+        float focal_y = sqrt(V_fit_angle);
+        sprintf( s_text, "focal_y=%f VFit_Result[1]=%e, VFit_x=%f, VFit_y=%f, ", focal_y, VFitResult[1],VFitResult[2],VFitResult[3]);
+        //sprintf( s_text, "focal_y=%f top_x=%d, top_y=%d, bottom_x=%d, bottom_y=%d V_length = %d", focal_y_ave, top_x, top_y, bottom_x, bottom_y, bottom_y-top_y);
+        //sprintf( s_text, "VFitResult[0]=%.2f VFitResult[1]=%.2f, VFitResult[2]=%.2f, VFitResult[3]=%.2f", VFitResult[0],VFitResult[1],VFitResult[2],VFitResult[3]);
         cvPutText (Ipl_calibration_test, s_text,cvPoint(10,60), &font, cvScalar(255,255,0));
 
         int cal_st;
